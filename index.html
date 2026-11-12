@@ -1,59 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#050d1b">
-<title>JARVIS AI</title>
-<style>
-* { box-sizing: border-box; }
-body { margin: 0; background: #050d1b; color: #e9faff; font-family: Arial, sans-serif; }
-.app { max-width: 650px; margin: auto; min-height: 100dvh; display: flex; flex-direction: column; padding: 24px 16px; }
-h1 { color: #00d9ff; text-align: center; letter-spacing: 5px; }
-.status { text-align: center; color: #7defff; }
-.orb { width: 170px; height: 170px; border: 3px solid #00d9ff; border-radius: 50%; margin: 35px auto; box-shadow: 0 0 35px #008cff; display: grid; place-items: center; color: #00d9ff; font-size: 45px; }
-.chat { flex: 1; overflow-y: auto; padding: 15px; border: 1px solid #176080; border-radius: 15px; min-height: 180px; }
-.message { margin: 12px 0; }
-.controls { display: flex; gap: 8px; margin-top: 15px; }
-input { flex: 1; min-width: 0; padding: 14px; border-radius: 10px; border: none; font-size: 16px; }
-button { background: #00bfe8; border: none; border-radius: 10px; padding: 14px; font-size: 17px; }
-</style>
-</head>
-<body>
-<div class="app">
-<h1>J.A.R.V.I.S.</h1>
-<div class="status">SYSTEM ONLINE</div>
-<div class="orb">✦</div>
-<div class="chat" id="chat"><div class="message">JARVIS: Hello! How can I help you?</div></div>
-<div class="controls">
-<input id="message" placeholder="Ask JARVIS...">
-<button onclick="sendMessage()">Send</button>
-<button onclick="speak()">🎙️</button>
-</div>
-</div>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#050d1b"><title>JARVIS AI</title>
+<style>*{box-sizing:border-box}body{margin:0;background:#050d1b;color:#e9faff;font-family:Arial,sans-serif}.app{max-width:650px;margin:auto;min-height:100dvh;display:flex;flex-direction:column;padding:24px 16px}h1{color:#00d9ff;text-align:center;letter-spacing:5px}.status{text-align:center;color:#7defff}.orb{width:170px;height:170px;border:3px solid #00d9ff;border-radius:50%;margin:35px auto;box-shadow:0 0 35px #008cff;display:grid;place-items:center;color:#00d9ff;font-size:45px}.chat{flex:1;overflow-y:auto;padding:15px;border:1px solid #176080;border-radius:15px;min-height:180px}.message{margin:12px 0;white-space:pre-wrap}.controls{display:flex;gap:8px;margin-top:15px}input[type=text],input[type=password]{flex:1;min-width:0;padding:14px;border-radius:10px;border:0;font-size:16px}button{background:#00bfe8;border:0;border-radius:10px;padding:14px;font-size:17px;cursor:pointer}button:disabled{opacity:.5}.settings{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:13px}.settings input[type=password]{width:125px;padding:8px}.settings label{white-space:nowrap}</style></head>
+<body><div class="app"><h1>J.A.R.V.I.S.</h1><div class="status" id="status">READY TO CONNECT</div><div class="orb">✦</div><div class="settings"><label for="pin">Access PIN</label><input type="password" id="pin" placeholder="Server PIN" autocomplete="off"><label><input type="checkbox" id="voice" checked> Speak replies</label></div><div class="chat" id="chat" aria-live="polite"><div class="message">JARVIS: Hello! How can I help you?</div></div><div class="controls"><input type="text" id="message" placeholder="Ask JARVIS..." aria-label="Your message"><button id="send" onclick="sendMessage()">Send</button><button onclick="listen()" aria-label="Speak to JARVIS">🎙️</button></div></div>
 <script>
-const input = document.getElementById("message");
-const chat = document.getElementById("chat");
-function addMessage(who, text) {
- const div = document.createElement("div");
- div.className = "message";
- div.textContent = who + ": " + text;
- chat.appendChild(div);
- chat.scrollTop = chat.scrollHeight;
-}
-function sendMessage() {
- const text = input.value.trim();
- if (!text) return;
- addMessage("You", text);
- input.value = "";
- addMessage("JARVIS", "AI connection coming soon.");
-}
-function speak() {
- addMessage("JARVIS", "Voice setup coming soon.");
-}
-input.addEventListener("keydown", e => {
- if (e.key === "Enter") sendMessage();
-});
-</script>
-</body>
-</html>
+const input=document.getElementById("message"),chat=document.getElementById("chat"),statusEl=document.getElementById("status"),sendBtn=document.getElementById("send");let history=[],busy=false;
+function addMessage(who,text){const div=document.createElement("div");div.className="message";div.textContent=who+": "+text;chat.appendChild(div);chat.scrollTop=chat.scrollHeight}
+function say(text){if(!document.getElementById("voice").checked||!("speechSynthesis" in window))return;window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang="en-GB";u.rate=.95;u.pitch=.85;const voices=window.speechSynthesis.getVoices();u.voice=voices.find(v=>v.lang==="en-GB"&&/Daniel|Oliver|Male/i.test(v.name))||voices.find(v=>v.lang==="en-GB")||null;window.speechSynthesis.speak(u)}
+async function sendMessage(){const text=input.value.trim(),pin=document.getElementById("pin").value;if(!text||busy)return;if(!pin){addMessage("JARVIS","Enter your server access PIN first.");return}busy=true;sendBtn.disabled=true;addMessage("You",text);input.value="";statusEl.textContent="THINKING";try{const r=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json","X-Jarvis-Pin":pin},body:JSON.stringify({message:text,history:history.slice(-12)})});const data=await r.json();if(!r.ok)throw Error(data.error||"Connection failed");addMessage("JARVIS",data.reply);history.push({role:"user",content:text},{role:"assistant",content:data.reply});history=history.slice(-12);say(data.reply);statusEl.textContent="SYSTEM ONLINE"}catch(e){addMessage("JARVIS",e.message);statusEl.textContent="CONNECTION ERROR"}finally{busy=false;sendBtn.disabled=false}}
+function listen(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){addMessage("JARVIS","Speech recognition is unavailable in this browser. You can still type and hear my replies.");return}const r=new SR();r.lang="en-GB";r.interimResults=false;r.onresult=e=>{input.value=e.results[0][0].transcript;sendMessage()};r.onerror=e=>addMessage("JARVIS","Microphone error: "+e.error);r.start()}
+input.addEventListener("keydown",e=>{if(e.key==="Enter")sendMessage()});
+</script></body></html>
